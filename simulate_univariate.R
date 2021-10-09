@@ -19,15 +19,7 @@ asn_z <- function(x){
 
 dat$z <- sapply(X, asn_z)
 
-# 
-# beta.z <-c(-.75)
-# p.score <- pnorm(as.matrix(scale(X)) %*% beta.z)
-# hist(p.score)
-# summary(p.score)
 
-
-#dat$z <- rbinom(nrow(dat),1, p.score)
-#dat$z <- rbinom(nrow(dat),1, p.score)
 
 dat$y1 <- with(dat, 
                180 -7 +.5*scaled_age + I((scaled_age-.1)^2)*2  + rnorm(nrow(dat))

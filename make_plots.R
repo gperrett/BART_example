@@ -135,8 +135,48 @@ lines(dat$age[order(dat$age)], dat$true.1[order(dat$age)], lwd = 2, col = 'red')
 lines(dat$age[order(dat$age)], dat$true.0[order(dat$age)], lwd = 2, col = 'blue')
 points(dat$age[bart.overlap$commonSup.sub == F],dat$y[bart.overlap$commonSup.sub == F])
 legend('topleft', legend=c('Treatment', 'Control', 'Removed'), col = c('red', 'blue', 'black'), pch = c(19, 19, 21))
-
+par(mfrow = c(1,1))
 
 # Figure 8  ---------------------------------------------------------------
+rm(list = ls())
+source('simulate_multivaraite.R')
 
+## fit bart 
+bart.multivariate <- bartc(y, z, confounders = miles + age, data = dat)
+
+## extract icates
+icate.m <- apply(bartCause::extract(bart.multivariate, 'icate'), 2, mean)
+icate.sd <- apply(bartCause::extract(bart.multivariate, 'icate'), 2, sd)
+icate.ucl <- icate.m + 1.96*icate.sd
+icate.lcl <- icate.m - 1.96*icate.sd
+icate.o <- order(icate.m)
+
+
+
+dat <- dat %>% 
+  mutate(color = 
+           case_when(miles == 'low milage' ~ 'orange', 
+                     miles == 'moderate milage' ~ 'pink', 
+                     miles == 'high milage' ~ 'green'))
+
+high <- hist(icate.m[dat$miles == 'high milage'], col = 'dark green')
+low <- hist(icate.m[dat$miles == 'low milage'], col = 'orange')
+mod <- hist(icate.m[dat$miles == 'moderate milage'], col = 'pink')
+
+
+
+plot(NULL, type = 'n', 
+     xlim = range(icate.lcl, icate.ucl), ylim = range(0, 80), 
+     xlab = 'effect order', ylab = "individual conditional treatment effect")
+plot(high, add = T)
+plot(low, add = T)
+plot(mod, add = T)
+
+lines(rbind(seq_along(icate.m), seq_along(icate.m), NA),
+      rbind(icate.lcl[icate.o], icate.ucl[icate.o], NA), lwd = .5, col = dat$color)
+points(seq_along(icate.m), icate.m[icate.o], pch = 20, col = dat$color)
+
+tibble(icate.m,age = dat$age, miles = dat$miles) %>% 
+  ggplot(aes(icate.m, fill = miles)) + 
+  geom_histogram()
 
