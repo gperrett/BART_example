@@ -46,6 +46,9 @@ est <- lm(y~ z + age, dat)$coeff[[2]]
 se <- sqrt(diag(vcov(lm(y~ z+ age, dat))))[[2]]
 est + se*1.96;est - se*1.96
 with(dat, mean(y1 - y0))
+with(dat[dat$z ==1,], mean(y1 - y0))
+with(dat[dat$z ==0,], mean(y1 - y0))
+
 
 # bart suceeds 
 bartc(dat$y, dat$z, dat$age)

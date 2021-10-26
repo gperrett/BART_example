@@ -3,6 +3,7 @@ library(rpart)
 library(rpart.plot)
 library(gbm)
 library(bartCause)
+library(treatSens)
 
 
 # Figure 2 ----------------------------------------------------------------
@@ -77,7 +78,140 @@ lines(dat$age[dat$z== 1], dat$gbm.preds[dat$z== 1], lwd = 3, col = 'red', lty = 
 
 # Figure 5 ----------------------------------------------------------------
 
+## select subset of data
+dat <- dat[order(dat$age),]
+observed <- round(dat[c(1,40,100), c('age', 'z', 'y')], 2)
+elipise <- rep('...', 3)
+observed <- rbind.data.frame(observed, elipise)
+observed <- rbind.data.frame(observed, round(dat[c(400, 420, 460),c('age', 'z', 'y')], 2))
+observed <- rbind(observed, elipise)
+names(observed) <- c('age', 'hyperShoe', 'running time')
+ggplot() + 
+annotation_custom(tableGrob(observed, rows = NULL, theme = ttheme_default(base_size = 8))) 
 
+## fit bart 
+bart <- bartc(dat$y, dat$z, dat$age)
+
+## extract posteriors 
+mu.1 <- bartCause::extract(bart, 'mu.1')
+mu.0 <- bartCause::extract(bart, 'mu.0')
+icate <- bartCause::extract(bart, 'icate')
+
+t1 <- observed
+names(t1)  <- c('age', 'hyperShoe', 'mu (1) hat')
+
+t1[,2] <- c(1,1,1,'...', 1, 1, 1, '...')
+preds <- round(apply(mu.1[,c(1,40,100)], 2, mean), 2)
+preds <- c(preds, '...')
+preds <- c(preds, round(apply(mu.1[,c(400, 420, 460)], 2, mean), 2), '...')
+t1[,3] <- preds
+t1 
+
+names(t1)[3] <- "$\\mu$"
+ggplot() + 
+  annotation_custom(
+    tableGrob(t1,
+              rows = NULL, theme = ttheme_default(base_size = 8))) 
+
+
+t0 <- observed
+names(t0)  <- c('age', 'hyperShoe', 'mu (0) hat')
+
+t0[,2] <- c(0,0,0,'...', 0, 0, 0, '...')
+preds <- round(apply(mu.0[,c(1,40,100)], 2, mean), 2)
+preds <- c(preds, '...')
+preds <- c(preds, round(apply(mu.0[,c(400, 420, 460)], 2, mean), 2), '...')
+t0[,3] <- preds
+
+names(t0)[3] <- 'prediction'
+
+ggplot() + 
+  annotation_custom(tableGrob(t0, rows = NULL, theme = ttheme_default(base_size = 8))) 
+
+
+## averaged over icates
+# hist(mu.1[, 1])
+# hist(mu.0[, 1])
+# hist(icate[, 1])
+# 
+# 
+# par(mfrow = c(3,1))
+# hist(apply(mu.1, 2, mean), 
+#      xlab = TeX(r'(predicted $\textbf{\textit{mu}}$ | z = 1)'), 
+#      main = TeX(r'($\widehat{\textbf{\textit{mu}}}(1)$)'),
+#      col = 'red', 
+#      xlim = c(170, 195))
+# hist(apply(mu.0, 2, mean), 
+#      xlab = TeX(r'(predicted $\textbf{\textit{mu}}$ | z = 0)'),
+#      main = TeX(r'($\widehat{\textbf{\textit{mu}}}(0)$)'),
+#      col = 'blue', 
+#      xlim = c(170, 195))
+# 
+# hist(apply(icate, 2, mean), 
+#      xlab = 'individual conditional treatment effects (ICATE)', 
+#      main = TeX(r'($\widehat{\textbf{\textit{mu}}}(1) - \widehat{\textbf{\textit{mu}}}(0)$)'),
+#      col = 'purple')
+
+
+## individual lelvel icate
+library(latex2exp)
+par(mfrow = c(3,1), oma = c(0,0,0,0), mar = c(3,3,3,3))
+hist(mu.1[,40], 
+     xlab = TeX(r'(predicted $\mu_2$ | z = 1)'), 
+     main = TeX(r'($\widehat{\mu_2}(1)$)'),
+     col = 'red', 
+     breaks = seq(175,182,l=15),
+     xlim = c(175, 182))
+
+hist(mu.0[,40], 
+     xlab = TeX(r'(predicted $\mu_2$ | z = 0)'), 
+     main = TeX(r'($\widehat{\mu_2}(0)$)'),
+     col = 'blue', 
+     xlim = c(175, 182))
+
+
+hist(icate[,40], 
+     xlab = 'individual conditional treatment effects (ICATE)', 
+     main = TeX(r'($\widehat{\mu_2}(1) - \widehat{\mu_2}(0)$)'),
+     col = 'purple')
+
+# 
+# ## make tables
+# observed <- round(dat[c(1), c('age', 'z', 'y')], 2)
+# observed <- rbind.data.frame(observed, observed, observed)
+# elipise <- rep('...', 3)
+# observed <- rbind.data.frame(observed, elipise, observed)
+# names(observed) <- c('age', 'hyperShoe', 'running time')
+# ggplot() + 
+#   annotation_custom(tableGrob(observed, rows = NULL, theme = ttheme_default(base_size = 8))) 
+# 
+# t1 <- observed
+# names(t1)  <- c('age', 'hyperShoe', 'mu (1) hat')
+# 
+# t1[,2] <- c(1,1,1,'...', 1, 1, 1)
+# preds <- round(mu.1[1:3, 1], 2)
+# preds <- c(preds, '...')
+# preds <- c(preds, round(mu.1[4:6, 1], 2))
+# t1[,3] <- preds
+# 
+# 
+# ggplot() + 
+#   annotation_custom(tableGrob(t1, rows = NULL, theme = ttheme_default(base_size = 8))) 
+# 
+# 
+# 
+# t0 <- observed
+# names(t0)  <- c('age', 'hyperShoe', 'mu (0) hat')
+# 
+# t0[,2] <- c(0,0,0,'...', 0, 0, 0)
+# preds <- round(mu.0[1:3, 1], 2)
+# preds <- c(preds, '...')
+# preds <- c(preds, round(mu.0[4:6, 1], 2))
+# t0[,3] <- preds
+# 
+# 
+# ggplot() + 
+#   annotation_custom(tableGrob(t0, rows = NULL, theme = ttheme_default(base_size = 8))) 
 
 # Figure 6 ----------------------------------------------------------------
 
@@ -112,6 +246,7 @@ segments(dat$age[dat$z ==0], y0 = dat$cf.lcl[dat$z ==0], y1 = dat$cf.ucl[dat$z =
 # Figure 7 ----------------------------------------------------------------
 rm(list = ls())
 source('simulate_overlap.R')
+source('simulate_univariate2.R')
 # #fit bart model with overlap adjustment
 bart.overlap <- bartc(dat$y, dat$z, dat$age, commonSup.rule = 'sd')
 
@@ -125,7 +260,8 @@ icate.ucl <- icate.m + 1.96*icate.sd
 par(mfrow = c(1, 2))
 
 ## icate and true tau 
-with(dat, plot(rep(age, 2), c(icate.ucl, icate.lcl), cex = .5, pch = 19, type = 'n',xlab = 'age', ylab = 'treatment effect', main = 'BART Predicted Treatment Effect'))
+plot(dat$age, icate.m, cex = .5, pch = 19, type = 'n',xlab = 'age', ylab = 'treatment effect', main = 'BART Predicted Treatment Effect')
+plot(dat$age, icate.lcl, type = 'n', xlim = c(min(dat$age), max(dat$age)), ylim = c(min(icate.lcl), max(icate.ucl)))
 segments(dat$age, y0 = icate.lcl, y1 = icate.ucl, col = ifelse(dat$z ==1, 'red', 'blue'))
 lines(dat$age[order(dat$age)], dat$tau[order(dat$age)], lwd = 2)
 
@@ -177,6 +313,16 @@ lines(rbind(seq_along(icate.m), seq_along(icate.m), NA),
 points(seq_along(icate.m), icate.m[icate.o], pch = 20, col = dat$color)
 
 tibble(icate.m,age = dat$age, miles = dat$miles) %>% 
-  ggplot(aes(icate.m, fill = miles)) + 
-  geom_histogram()
+  ggplot(aes(age, icate.m, col = miles)) + 
+  geom_point()
 
+
+# Figure 9  ---------------------------------------------------------------
+rm(list = ls())
+source('simulate_sensitivity.R')
+library(treatSens)
+out.bin <- treatSens(Y~ Z+ age, trt.family = binomial(link='probit'),data = dat, standardize = F)
+sensPlot(out.bin)
+
+out.bin <- treatSens(y~ z+ age, trt.family = binomial, data = dat, standardize = T)
+sensPlot(out.bin)

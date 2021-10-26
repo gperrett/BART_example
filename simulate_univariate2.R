@@ -1,11 +1,13 @@
+
+
 library(bartCause)
 set.seed(64)
 
 N <- 500
 
-X <- rnorm(N, 35, 10)
-X <- X[X > 18 & X < 55]
-
+# X <- rnorm(N, 35, 10)
+# X <- X[X > 18 & X < 55]
+X <- runif(N, 18, 55)
 dat <- data.frame(age = X, scaled_age = scale(X))
 
 #beta.z <-c(-1)
@@ -35,19 +37,19 @@ dat$z <- sapply(X, asn_z)
 #dat$z <- rbinom(nrow(dat),1, p.score)
 
 dat$y1 <- with(dat, 
-               180 -7 +.5*scaled_age + I((scaled_age-.1)^2)*2  + rnorm(nrow(dat))
+               180 -7 +.5*scaled_age + I((scaled_age)^2)*1.5  + rnorm(nrow(dat))
 )
 
 dat$true.1 <- with(dat, 
-                   180 -7 +.5*scaled_age + I((scaled_age-.1)^2)*2 
+                   180 -7 +.5*scaled_age + I((scaled_age)^2)*1.5
 )
 
 dat$y0 <- with(dat, 
-               176 +.5*scaled_age + I((scaled_age+.3)^2)*3.2 + rnorm(nrow(dat))
+               176 +.5*scaled_age + I((scaled_age+.2)^2)*2.5 + rnorm(nrow(dat))
 )
 
 dat$true.0 <-  with(dat, 
-                    176 +.5*scaled_age + I((scaled_age+.3)^2)*3.2
+                    176 +.5*scaled_age + I((scaled_age+.2)^2)*2.5
 )
 
 dat$tau <- dat$true.1 - dat$true.0
@@ -63,11 +65,8 @@ est + se*1.96;est - se*1.96
 with(dat, mean(y1 - y0))
 
 
-# fit bart 
-bart.overlap <- bartc(y, z, age, data = dat, seed = 0, commonSup.rule = 'sd')
-summary(bart.overlap)
-new_dat <- dat[bart.overlap$commonSup.sub,]
-with(new_dat, mean(y1 - y0))
+
+
 
 
 
