@@ -10,19 +10,19 @@ miles <- miles[X > 18 & X < 55]
 X <- X[X > 18 & X < 55]
 
 
-dat <- data.frame(age = X, scaled_age = scale(X), miles, sclaed_miles = scale(miles))
+dat <- data.frame(age = X, scaled_age = scale(X), miles, scaled_miles = scale(miles))
 hist(scale(miles))
 
 beta.z <- c(.1, .6)
-p.score <- pnorm(cbind(dat$sclaed_miles, dat$scaled_age) %*% beta.z)
+p.score <- pnorm(cbind(dat$scaled_miles, dat$scaled_age) %*% beta.z)
 
 dat$miles[dat$miles>60] <- 'high'
 dat$miles[dat$miles <= 60 & dat$miles >= 30] <- 'moderate'
 dat$miles[dat$miles < 30] <- 'low'
 
-dat$y1[dat$miles == 'high'] <- with(dat, 180 -15 +.5*scaled_age + I((scaled_age-.1)^2)*2.5)
-dat$y1[dat$miles == 'moderate'] <- with(dat, 180 -10 +.5*scaled_age + I((scaled_age-.1)^2)*2.5)
-dat$y1[dat$miles == 'low'] <- with(dat,180 -6 +.5*scaled_age + I((scaled_age-.1)^2)*2.7 )
+dat$y1[dat$miles == 'high'] <- with(dat[dat$miles == 'high',], 180 -15 +.5*scaled_age + I((scaled_age-.1)^2)*2.5)
+dat$y1[dat$miles == 'moderate'] <- with(dat[dat$miles == 'moderate',], 180 -10 +.5*scaled_age + I((scaled_age-.1)^2)*2.5)
+dat$y1[dat$miles == 'low'] <- with(dat[dat$miles == 'low',],180 -6 +.5*scaled_age + I((scaled_age-.1)^2)*2.7 )
 
 dat$y1 <- dat$y1 + rnorm(nrow(dat))
 dat$y0 <- with(dat, 176 +.5*scaled_age + I((scaled_age+.3)^2)*3.2 + rnorm(nrow(dat)))
