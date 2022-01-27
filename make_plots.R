@@ -333,51 +333,42 @@ dev.off()
 rm(list = setdiff(ls(), c("default_pars", "default_dims", "cb_palette")))
 source('simulate_multivariate.R')
 
-## fit bart 
-bart.multivariate <- bartc(y, z, confounders = miles + age, data = dat)
-
-## extract icates
-icate.m <- apply(bartCause::extract(bart.multivariate, 'icate'), 2, mean)
-icate.sd <- apply(bartCause::extract(bart.multivariate, 'icate'), 2, sd)
-icate.ucl <- icate.m + 1.96*icate.sd
-icate.lcl <- icate.m - 1.96*icate.sd
-icate.o <- order(icate.m)
-
-
+# pull covs
+covs <- dat %>% dplyr::select(age, miles)
+# fit model 
+model <- bartc(dat$y, dat$z, covs)
+icates <- bartCause::extract(model, 'icate')
+icate.sd <- apply(icates, 2, sd)
+icate.m <- apply(icates, 2, mean)
+icate.ub <- icate.m + 1.96*icate.sd
+icate.lb <- icate.m - 1.96*icate.sd
 
 library(dplyr, warn.conflicts = FALSE)
-dat <- dat %>% 
-  mutate(color = 
-           case_when(miles == 'low' ~ cb_palette[2], 
-                     miles == 'moderate' ~ cb_palette[1], 
+dat <- dat %>%
+  mutate(color =
+           case_when(miles == 'low' ~ cb_palette[2],
+                     miles == 'moderate' ~ cb_palette[1],
                      miles == 'high' ~ cb_palette[3]))
 
-high <- hist(icate.m[dat$miles == 'high'], col = cb_palette[3])
-low <- hist(icate.m[dat$miles == 'low'], col = cb_palette[2])
-mod <- hist(icate.m[dat$miles == 'moderate'], col = cb_palette[1])
+
+pdf("plots/hill8fig.pdf", default_dims[1], default_dims[2])
+do.call("par", default_pars)
+par(mfrow = c(1,2))
+
+plot(density(icate.m[dat$miles == 'high'], adjust = 2), 
+     col = cb_palette[3], cex = .5, pch = 19, xlab = 'individual CATE', 
+     main = 'Heterogeneous Treatment Effects by Mileage', 
+     xlim = c(-25,1), ylim = c(0, .15), 
+     lwd = 3)
+lines(density(icate.m[dat$miles == 'moderate'], adjust = 2), col = cb_palette[1], cex = .5, pch = 19, xlab = 'individual CATE', xlim = c(-25, 1), lwd = 3)
+lines(density(icate.m[dat$miles == 'low'], adjust = 2), col = cb_palette[2], cex = .5, pch = 19, xlab = 'individual CATE',  xlim = c(-25, 1), ylim = c(0, 60), lwd = 3)
+legend('topleft', legend=c('High Mileage', 'Moderate Mileage','Low Mileage'), col = c(cb_palette[3], cb_palette[1], cb_palette[2]), pch = c(19, 19, 19))
 
 
-
-#pdf("plots/hill8fig.pdf", default_dims[1], default_dims[2])
-#do.call("par", default_pars)
-# This plot doesn't appear to work yet - I'm guessing that
-# most of the implementation is in simulate_multivariate.R,
-# since that does some plotting as well.
-plot(NULL, type = 'n', 
-     xlim = range(icate.lcl, icate.ucl), ylim = range(0, 80), 
-     xlab = 'effect order', ylab = "individual conditional treatment effect",
-     bty = 'l')
-plot(high, col = cb_palette[3], add = TRUE)
-plot(low, col = cb_palette[2], add = TRUE)
-plot(mod, col = cb_palette[1], add = TRUE)
-
-lines(rbind(seq_along(icate.m), seq_along(icate.m), NA),
-      rbind(icate.lcl[icate.o], icate.ucl[icate.o], NA), lwd = .5, col = dat$color)
-points(seq_along(icate.m), icate.m[icate.o], pch = 20, col = dat$color)
-
-tibble(icate.m,age = dat$age, miles = dat$miles) %>% 
-  ggplot(aes(age, icate.m, col = miles)) + 
-  geom_point()
+plot(dat$age, icate.m, cex = .5, pch = 19, xlab = 'age', col = dat$color, ylab = 'individual CATE', main = 'Heterogeneous Treatment Effects by Age', ylim = c(min(icate.lb), max(icate.ub)))
+segments(dat$age, y0 = icate.lb, y1 = icate.ub, col = dat$color)
+legend('bottomleft', legend=c('High Mileage', 'Moderate Mileage','Low Mileage'), col = c(cb_palette[3], cb_palette[1], cb_palette[2]), pch = c(19, 19, 19))
+dev.off()
 
 
 # Figure 9  ---------------------------------------------------------------
